@@ -8,7 +8,7 @@ def main():
     Main function
     """
     
-    # Gravitational Constant times Earth mass
+    # Gravitational Constant times Earth mass times 1e-9 km/m
     earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20
 
