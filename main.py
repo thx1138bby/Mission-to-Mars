@@ -5,10 +5,9 @@ from scipy.integrate import solve_ivp
 def main():
     # Main function
     print("Starting Main Function")
-    initial_position = np.array([7000,0,0])
-
-    initial_velocity = np.array([0, 7.72, 5])
-    integration_time = 24*60*60
+    initial_position = np.array([150e6,0,0])
+    initial_velocity = np.array([0, 29.8, 0])
+    integration_time = 24*60*60*365.25
     integration_steps = 1000                                                                   
 
     trajectory, times = keplerian_propagator(initial_position, initial_velocity, integration_time, integration_steps)
@@ -51,6 +50,7 @@ def keplerian_eoms(t, state):
     """
     # Gravitational Constant times Earth mass
     earth_mu = 398600.441500000
+    sun_mu = 1.989e30*6.67e-20
     # Extract values from init
     x, y, z, vx, vy, vz = state
     r_dot = np.array([vx, vy, vz])
@@ -58,9 +58,9 @@ def keplerian_eoms(t, state):
     # Define r
     r = np.linalg.norm([x, y, z])
     # Solve for the acceleration
-    ax = - (earth_mu/r**3) * x
-    ay = - (earth_mu/r**3) * y
-    az = - (earth_mu/r**3) * z
+    ax = - (sun_mu/r**3) * x
+    ay = - (sun_mu/r**3) * y
+    az = - (sun_mu/r**3) * z
 
     v_dot = np.array([ax, ay, az])
 
