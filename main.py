@@ -13,9 +13,11 @@ def main():
     sun_mu = 1.989e30*6.67e-20
 
     earthRad = 150e6
-    earthVel = 29.8
+    earthVel = 29.8 # You need to calculate this istead of pulling from google
+    #earthVel = np.sqrt(sun_mu/earthRad)
     marsRad = 228e6
-    marsVel = 24.1
+    marsVel = 24.1 # Same here for the second DV
+    #marsVel = np.sqrt(sun_mu/marsRad)
     
     earthInitPos = np.array([earthRad,0,0])
     earthInitVel = np.array([0, earthVel, 0])
