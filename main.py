@@ -8,10 +8,10 @@ def main():
     Main function
     """
     
-    # Gravitational Constant times Earth mass times 1e-9 km/m
-    earth_mu = 398600.441500000
-    sun_mu = 1.989e30*6.67e-20
-    g = 9.80665
+    # Gravitational Constant times Earth mass, adjusted for kilometers
+    earth_mu = 398600.441500000 # * 1e-9 km^3/m^3
+    sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
+    g = 9.80665*1e-3 # km/s^2
 
     earthRad = 150e6
     earthVel = (sun_mu/earthRad)**0.5
@@ -27,8 +27,8 @@ def main():
     integration_steps = 1000
 
     # Delta V of ship (Hohmann)
-    shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn
-    shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn
+    shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
+    shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
@@ -36,8 +36,9 @@ def main():
     propellant_mass = 1500e3
     wet_mass = dry_mass + payload_mass + propellant_mass
     isp = 350 # approximation in s according to Elon Musk's tweet
-    propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn
-    propellant_2 = wet_mass * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn
+    
+    propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
+    propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
     propellant_total = propellant_1 + propellant_2
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
