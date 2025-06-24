@@ -9,7 +9,7 @@ def main():
     """
     
     # Gravitational Constant times Earth mass, adjusted for kilometers
-    earth_mu = 398600.441500000 # * 1e-9 km^3/m^3
+    # earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
     g = 9.80665*1e-3 # km/s^2
 
@@ -19,9 +19,9 @@ def main():
     marsVel = (sun_mu/marsRad)**0.5
     
     earthInitPos = np.array([earthRad,0,0])
-    earthInitVel = np.array([0, earthVel, 0])
-    marsInitPos = np.array([0,marsRad,0])
-    marsInitVel = np.array([-marsVel, 0, 0])
+    earthInitVel = np.array([0,earthVel, 0])
+    marsInitPos = np.array([marsRad, 0, 0])
+    marsInitVel = np.array([0, marsVel, 0])
 
     integration_time = (2*math.pi/((sun_mu)**0.5)*(((earthRad+marsRad)/2)**1.5))/2
     integration_steps = 1000
@@ -30,7 +30,8 @@ def main():
     shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
     shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
-
+    
+    """
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
     propellant_mass = 1500e3
@@ -40,10 +41,11 @@ def main():
     propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
     propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
     propellant_total = propellant_1 + propellant_2
+    """
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
-    ship, times = keplerian_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
+    ship, times = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
     # Plot it
     fig = plt.figure()
     # Define axes in that figure
@@ -61,13 +63,6 @@ def main():
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
 
-    print("Transfer Time (days): "+str(integration_time/86400))
-    print("Delta V at Departure (km/s): "+str(shipDeltaV1))
-    print("Delta V at Arrival (km/s): "+str(shipDeltaV2))
-    print("Departing Propellant Expenditure (t): "+str(propellant_1/1e3))
-    print("Arriving Propellant Expenditure (t): "+str(propellant_2/1e3))
-    print("Total Propellant Expenditure (t): "+str(propellant_total/1e3))
-    
     plt.show()
     
 
@@ -86,12 +81,26 @@ def keplerian_propagator(init_r, init_v, tof, steps):
     # Return everything
     return sol.y, sol.t
 
+def ship_propagator(init_r, init_v, tof, steps):
+    """
+    Function to propagate a given orbit
+    """
+    # Time vector
+    tspan = [0, tof]
+    # Array of time values
+    tof_array = np.linspace(0,tof, num=steps)
+    init_state = np.concatenate((init_r,init_v))
+    # Do the integration
+    sol = solve_ivp(fun = lambda t,x:ship_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol = 1e-12, atol = 1e-12)
+
+    # Return everything
+    return sol.y, sol.t
+
 
 def keplerian_eoms(t, state):
     """
     Equation of motion for 2body orbits
     """
-    earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20
     
     # Extract values from init
@@ -103,6 +112,41 @@ def keplerian_eoms(t, state):
     # Solve for the acceleration
     ax = - (sun_mu/r**3) * x
     ay = - (sun_mu/r**3) * y
+    az = - (sun_mu/r**3) * z
+
+    v_dot = np.array([ax, ay, az])
+
+    dx = np.append(r_dot, v_dot)
+
+    return dx
+
+def ship_eoms(t, state):
+    """
+    Equation of motion for 2body orbits
+    """
+    
+    # Extract values from init
+    x, y, z, vx, vy, vz = state
+    r_dot = np.array([vx, vy, vz])
+    
+    # Define r
+    r = np.linalg.norm([x, y, z])
+    
+    sun_mu = 1.989e30*6.67e-20
+    solar_constant = 1.361e6 # kw/m^2 * 1e6 m^2/km^2
+    au = 150e6 # km
+    lightspeed = 299792 # km/s
+    sail_width = 2 # km
+    sail_area = sail_width**2 # km^2
+    rad_pressure = solar_constant/(lightspeed*(r/au)**2) # Pa
+    force = sail_area*rad_pressure
+    dry_mass = 100e3
+    
+    acceleration = force/dry_mass*1e-3 # m/s^2 * 1e-3 km/m
+    
+    # Solve for the acceleration
+    ax = - (sun_mu/r**3) * x + x/r * acceleration
+    ay = - (sun_mu/r**3) * y + y/r * acceleration
     az = - (sun_mu/r**3) * z
 
     v_dot = np.array([ax, ay, az])
