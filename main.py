@@ -38,6 +38,7 @@ def main():
     isp = 350 # approximation in s according to Elon Musk's tweet
     
     propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
+    print(1-math.e**(-shipDeltaV1/(isp*g)))
     propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
     propellant_total = propellant_1 + propellant_2
 
@@ -64,9 +65,9 @@ def main():
     print("Transfer Time (days): "+str(integration_time/86400))
     print("Delta V at Departure (km/s): "+str(shipDeltaV1))
     print("Delta V at Arrival (km/s): "+str(shipDeltaV2))
-    print("Departing Propellant Expenditure (kg): "+str(propellant_1))
-    print("Arriving Propellant Expenditure (kg): "+str(propellant_2))
-    print("Total Propellant Expenditure (kg): "+str(propellant_total))
+    print("Departing Propellant Expenditure (t): "+str(propellant_1/1e3))
+    print("Arriving Propellant Expenditure (t): "+str(propellant_2/1e3))
+    print("Total Propellant Expenditure (t): "+str(propellant_total/1e3))
     
     plt.show()
     
