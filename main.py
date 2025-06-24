@@ -11,13 +11,12 @@ def main():
     # Gravitational Constant times Earth mass times 1e-9 km/m
     earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20
+    g = 9.80665
 
     earthRad = 150e6
-    earthVel = 29.8 # You need to calculate this istead of pulling from google
-    #earthVel = np.sqrt(sun_mu/earthRad)
+    earthVel = (sun_mu/earthRad)**0.5
     marsRad = 228e6
-    marsVel = 24.1 # Same here for the second DV
-    #marsVel = np.sqrt(sun_mu/marsRad)
+    marsVel = (sun_mu/marsRad)**0.5
     
     earthInitPos = np.array([earthRad,0,0])
     earthInitVel = np.array([0, earthVel, 0])
@@ -28,8 +27,18 @@ def main():
     integration_steps = 1000
 
     # Delta V of ship (Hohmann)
-    shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1)
+    shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn
+    shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
+
+    dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
+    payload_mass = 150e3
+    propellant_mass = 1500e3
+    wet_mass = dry_mass + payload_mass + propellant_mass
+    isp = 350 # approximation in s according to Elon Musk's tweet
+    propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn
+    propellant_2 = wet_mass * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn
+    propellant_total = propellant_1 + propellant_2
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
@@ -51,10 +60,12 @@ def main():
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
 
-    shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5)
     print("Transfer Time (days): "+str(integration_time/86400))
     print("Delta V at Departure (km/s): "+str(shipDeltaV1))
     print("Delta V at Arrival (km/s): "+str(shipDeltaV2))
+    print("Departing Propellant Expenditure (kg): "+str(propellant_1))
+    print("Arriving Propellant Expenditure (kg): "+str(propellant_2))
+    print("Total Propellant Expenditure (kg): "+str(propellant_total))
     
     plt.show()
     
