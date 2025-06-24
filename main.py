@@ -32,7 +32,7 @@ def main():
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
-    payload_mass = 150e3
+    payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
     propellant_mass = 1500e3
     wet_mass = dry_mass + payload_mass + propellant_mass
     isp = 350 # approximation in s according to Elon Musk's tweet
