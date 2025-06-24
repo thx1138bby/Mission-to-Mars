@@ -38,7 +38,6 @@ def main():
     isp = 350 # approximation in s according to Elon Musk's tweet
     
     propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
-    print(1-math.e**(-shipDeltaV1/(isp*g)))
     propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
     propellant_total = propellant_1 + propellant_2
 
