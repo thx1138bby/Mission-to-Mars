@@ -18,10 +18,10 @@ def main():
     marsRad = 228e6
     marsVel = (sun_mu/marsRad)**0.5
     
-    earthInitPos = np.array([earthRad,0,0])
+    earthInitPos = np.array([earthRad, 0, 0])
     earthInitVel = np.array([0, earthVel, 0])
-    marsInitPos = np.array([0,marsRad,0])
-    marsInitVel = np.array([-marsVel, 0, 0])
+    marsInitPos = np.array([marsRad, 0, 0])
+    marsInitVel = np.array([0, marsVel, 0])
 
     integration_time = (2*math.pi/((sun_mu)**0.5)*(((earthRad+marsRad)/2)**1.5))/2
     integration_steps = 1000
@@ -41,8 +41,8 @@ def main():
     propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
     propellant_total = propellant_1 + propellant_2
 
-    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
-    mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
+    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time*2, integration_steps)
+    mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time*3, integration_steps)
     ship, times = keplerian_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
     # Plot it
     fig = plt.figure()
