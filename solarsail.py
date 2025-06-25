@@ -132,13 +132,13 @@ def ship_eoms(t, state):
     solar_constant = 1.361e6 # kw/m^2 * 1e6 m^2/km^2
     au = 150e6 # km
     lightspeed = 299792 # km/s
-    sail_width = 5 # km
+    sail_width = 7.5 # km
     sail_area = sail_width**2 # km^2
     rad_pressure = solar_constant/(lightspeed*(r/au)**2) # Pa
     force = sail_area*rad_pressure
-    dry_mass = 100e3
+    ship_mass = 200e3 # 150 tons of payload plus 50 tons (high estimate) of payload section hull
     
-    acceleration = force/dry_mass*1e-3 # m/s^2 * 1e-3 km/m
+    acceleration = force/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
     
     # Solve for the acceleration
     ax = - (sun_mu/r**3) * x + x/r * acceleration
