@@ -39,7 +39,7 @@ def main():
     # Delta V of Hohmann transfer (for reference)
     hohmannDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
     hohmannDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
-    hohmannDeltaV_net = hohmannDeltaV2-hohmannDeltaV1 # net delta v of ship (difference in orbital velocities)
+    hohmannDeltaV_net = hohmannDeltaV1-hohmannDeltaV2 # net delta v of ship (difference in orbital velocities)
     
     propellant_1 = hohmann_mass * (1 - math.e**(-hohmannDeltaV1/(hohmann_isp*g))) # propellant expended by departing burn (kg) (same as Hohmann)
 
