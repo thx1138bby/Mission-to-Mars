@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 import math
 
+arrived = False
+
 def main():
     """
     Main function
@@ -20,28 +22,16 @@ def main():
     
     earthInitPos = np.array([earthRad,0,0])
     earthInitVel = np.array([0,earthVel, 0])
-    marsInitPos = np.array([marsRad, 0, 0])
-    marsInitVel = np.array([0, marsVel, 0])
+    marsInitPos = np.array([0, marsRad, 0])
+    marsInitVel = np.array([-marsVel, 0, 0])
 
-    integration_time = (2*math.pi/((sun_mu)**0.5)*(((earthRad+marsRad)/2)**1.5))/2
+    integration_time = 24*60*60*28*6.54
     integration_steps = 1000
 
     # Delta V of ship (Hohmann)
     shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
     shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
-    
-    """
-    dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
-    payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 1500e3
-    wet_mass = dry_mass + payload_mass + propellant_mass
-    isp = 350 # approximation in s according to Elon Musk's tweet
-    
-    propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
-    propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
-    propellant_total = propellant_1 + propellant_2
-    """
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
@@ -62,6 +52,11 @@ def main():
     ax.yaxis.set_tick_params(labelsize=7)
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
+
+    if arrived:
+        print(arrived)
+
+    print(integration_time/86400)
 
     plt.show()
     
@@ -152,6 +147,10 @@ def ship_eoms(t, state):
     v_dot = np.array([ax, ay, az])
 
     dx = np.append(r_dot, v_dot)
+
+    global arrived
+    if r >= 228e6:
+        arrived = True
 
     return dx
 
