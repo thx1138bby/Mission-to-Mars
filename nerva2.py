@@ -31,6 +31,7 @@ def main():
     propellant_mass = 1500e3
     engine_mass = 18144 # kg
     wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass
+    hohmann_mass = dry_mass + payload_mass + propellant_mass
     hohmann_isp = 350
     isp = 841 # isp of nerva
     exhaust_v = isp * g
@@ -40,7 +41,7 @@ def main():
     hohmannDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
     hohmannDeltaV_net = hohmannDeltaV2-hohmannDeltaV1 # net delta v of ship (difference in orbital velocities)
     
-    propellant_1 = wet_mass * (1 - math.e**(-hohmannDeltaV1/(hohmann_isp*g))) # propellant expended by departing burn (kg) (same as Hohmann)
+    propellant_1 = hohmann_mass * (1 - math.e**(-hohmannDeltaV1/(hohmann_isp*g))) # propellant expended by departing burn (kg) (same as Hohmann)
 
     # Delta V of ship
     shipDeltaV1 = exhaust_v * math.log(wet_mass / (wet_mass - propellant_1)) # delta v from departing burn (km/s)
