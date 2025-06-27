@@ -38,7 +38,7 @@ def main():
     isp = 3350
     exhaust_v = 32.9 # km/s
     pulse_unit_mass = 79 # mass in kg of one pulse unit
-    pulse_unit_number = 813 # number of pulse units at start
+    pulse_unit_number = 814 # number of pulse units at start
     propellant_mass = pulse_unit_mass * pulse_unit_number # mass of all pulse units at start
     engine_mass = 107900
     raptor_mass = 1630 # mass of one raptor engine
