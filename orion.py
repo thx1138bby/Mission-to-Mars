@@ -38,10 +38,11 @@ def main():
     isp = 3350
     exhaust_v = 32.9 # km/s
     pulse_unit_mass = 79 # mass in kg of one pulse unit
-    pulse_unit_number = 835 # number of pulse units at start
+    pulse_unit_number = 813 # number of pulse units at start
     propellant_mass = pulse_unit_mass * pulse_unit_number # mass of all pulse units at start
     engine_mass = 107900
-    wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass
+    raptor_mass = 1630 # mass of one raptor engine
+    wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass - raptor_mass * 6
     
     pulse_units_1 = (wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g)))) // pulse_unit_mass + 1 # number of pulse units expended by departing burn
     pulse_units_2 = ((wet_mass - pulse_units_1*pulse_unit_mass) * (1 - math.e**(-shipDeltaV2/(isp*g)))) // pulse_unit_mass + 1 # number of pulse units expended by arriving burn
