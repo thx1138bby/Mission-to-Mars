@@ -5,7 +5,7 @@ import math
 
 dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
 payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-propellant_mass = 2.5 # total capacity 1500e3
+propellant_mass = 18 # total capacity 1500e3
 reactor_mass = 200e3 # rough estimate
 wet_mass = dry_mass + payload_mass + propellant_mass + reactor_mass
 ship_mass = wet_mass
