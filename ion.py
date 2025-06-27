@@ -144,7 +144,7 @@ def ship_eoms(t, state):
     efficiency = 0.9
     g = 9.80665
     thrusters = 100 # number of thrusters
-    voltage = 150000000 / thrusters # per thruster
+    voltage = 150e6 / thrusters # per thruster
     # wattage = voltage * beam_current
     # total wattage = 300 mWe
 
