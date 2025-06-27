@@ -33,9 +33,10 @@ def main():
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 258e3
-    engine_mass = 18144 # kg
-    wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass
+    propellant_mass = 249e3
+    engine_mass = 18144 # mass of nerva engine (kg)
+    raptor_mass = 1630 # mass of one raptor engine
+    wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass - raptor_mass * 6
     isp = 841
     
     propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
