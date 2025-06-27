@@ -49,7 +49,7 @@ def main():
     ax.set_aspect('equal', adjustable='box')
 
     if arrival_time is not None:
-        print(arrival_time/86400)
+        print("Travel time (days): "+str(arrival_time/86400))
 
     plt.show()
 
@@ -132,11 +132,17 @@ def ship_eoms(t, state):
     solar_constant = 1.361e6 # kw/m^2 * 1e6 m^2/km^2
     au = 150e6 # km
     lightspeed = 299792 # km/s
-    sail_width = 7.5 # km
+    sail_density = 1.4e3 # g/cm^3 * 1e3 kg/g
+    sail_width = 7 # km
+    sail_width_cm = sail_width*1e5
     sail_area = sail_width**2 # km^2
+    sail_thickness = 2.5 * 1e-4 # 2.5 um to cm
     rad_pressure = solar_constant/(lightspeed*(r/au)**2) # Pa
     force = sail_area*rad_pressure
-    ship_mass = 200e3 # 150 tons of payload plus 50 tons (high estimate) of payload section hull
+    dry_mass = 50e3 # rough estimate of payload section hull
+    payload_mass = 150e3
+    sail_mass = sail_width_cm**2 * sail_thickness * sail_density
+    ship_mass = dry_mass + payload_mass
     
     acceleration = force/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
     
