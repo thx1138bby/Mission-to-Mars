@@ -56,7 +56,7 @@ def main():
 
     if arrival_time is not None:
         print("Travel time (days): "+str(arrival_time/86400))
-    print("Propellant Expended (kg): "+str(wet_mass - ship_mass))
+    print("Propellant Expended (t): "+str((wet_mass - ship_mass)/1e3))
 
     plt.show()
 
