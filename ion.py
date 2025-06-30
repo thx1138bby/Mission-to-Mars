@@ -143,8 +143,8 @@ def ship_eoms(t, state):
     beam_current = 2 # amperes
     efficiency = 0.9
     g = 9.80665
-    thrusters = 100 # number of thrusters
-    voltage = 150e6 / thrusters # per thruster
+    thrusters = 10 # number of thrusters
+    voltage = 150e4 / thrusters # per thruster
     # wattage = voltage * beam_current
     # total wattage = 300 mWe
 
@@ -155,8 +155,8 @@ def ship_eoms(t, state):
     mass_flow = thrust / exhaust_v
     
     # Solve for the acceleration
-    ax = - (sun_mu/r**3) * x + x/r * acceleration
-    ay = - (sun_mu/r**3) * y + y/r * acceleration
+    ax = - (sun_mu/r**3) * x + vx/np.linalg.norm([vx,vy]) * acceleration
+    ay = - (sun_mu/r**3) * y + vy/np.linalg.norm([vx,vy]) * acceleration
     az = - (sun_mu/r**3) * z
 
     ship_mass -= mass_flow

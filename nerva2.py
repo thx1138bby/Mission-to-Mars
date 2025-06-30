@@ -24,7 +24,7 @@ def main():
     marsInitVel = np.array([0, marsVel, 0])
 
     integration_time = 24*60*60*365*3
-    integration_steps = 1000
+    integration_steps = 100000
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
@@ -86,7 +86,7 @@ def reach_mars_event(t, state):
     return r - 228e6
 
 reach_mars_event.terminal = True
-reach_mars_event.direction = 1 
+reach_mars_event.direction = 0 
 
 def keplerian_propagator(init_r, init_v, tof, steps):
     """

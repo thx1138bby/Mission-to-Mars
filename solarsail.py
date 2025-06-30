@@ -30,7 +30,21 @@ def main():
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
-    ship, times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)                                   
+    ship, times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
+
+    final_ship = ship[0:3,-1]
+    final_x = final_ship[0]
+    final_y = final_ship[1]
+    
+    unit_dir = [final_x/np.hypot(final_x,final_y), final_y/np.hypot(final_x,final_y)]
+    theta = np.arctan(final_y/final_x)
+    theta2 = np.arctan2(final_y,final_x)
+    mars_x_vel = marsVel*np.sin(theta)
+    mars_y_vel = marsVel*np.cos(theta2)
+    mars_vel = [mars_x_vel, mars_y_vel, 0]
+    # Final ship velocity ship[3:,-1]
+    DV2_vector = ship[3:,-1] - mars_vel
+    DV2_mag = np.linalg.norm(DV2_vector)
     # Plot it
     fig = plt.figure()
     # Define axes in that figure
@@ -145,7 +159,6 @@ def ship_eoms(t, state):
     ship_mass = dry_mass + payload_mass
     
     acceleration = force/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
-    
     # Solve for the acceleration
     ax = - (sun_mu/r**3) * x + x/r * acceleration
     ay = - (sun_mu/r**3) * y + y/r * acceleration
