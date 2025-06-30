@@ -150,8 +150,8 @@ def ship_eoms(t, state):
     mass_flow = thrust / exhaust_v
     
     # Solve for the acceleration
-    ax = - (sun_mu/r**3) * x + x/r * acceleration
-    ay = - (sun_mu/r**3) * y + y/r * acceleration
+    ax = - (sun_mu/r**3) * x + vx/np.linalg.norm([vx,vy]) * acceleration
+    ay = - (sun_mu/r**3) * y + vy/np.linalg.norm([vx,vy]) * acceleration
     az = - (sun_mu/r**3) * z
 
     ship_mass -= mass_flow
