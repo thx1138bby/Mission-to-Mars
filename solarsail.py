@@ -1,7 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
+from functools import partial
 import math
+
+mass = 1
+area = 1
 
 def main():
     """
@@ -12,7 +16,7 @@ def main():
     # earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
     g = 9.80665*1e-3 # km/s^2
-    isp = 350
+    isp = 841
 
     earthRad = 150e6
     earthVel = (sun_mu/earthRad)**0.5
@@ -27,12 +31,23 @@ def main():
     integration_time = 24*60*60*365*3 # three years, arbitrarily high to ensure no cutoff
     integration_steps = 1000
 
-    shipInitVel = [0, earthVel, 0]
+    sail_width = 1000 # m
+    sail_area = sail_width**2 # m^2
+    sail_density = 1400 # kg/m^3
+    sail_thickness = 2.5 * 1e-6 # 2.5 um to m
+    dry_mass = 100e3
+    payload_mass = 150e3
+    propellant_mass = 1500e3
+    sail_mass = sail_area * sail_thickness * sail_density
+    wet_mass = dry_mass + payload_mass + sail_mass + propellant_mass
+
+    shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
+    shipInitVel = [0, earthVel+shipDeltaV1, 0]
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
-    ship, times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
-
+    ship, times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps, wet_mass, sail_area)
+    
     # Final ship velocity ship[3:,-1]
     final_ship = ship[0:3,-1]
     final_x = final_ship[0]
@@ -41,10 +56,16 @@ def main():
     mars_time_index = np.searchsorted(times, arrival_time)
     mars_vel_vector = mars[3:6, mars_time_index]
     DV2_vector = ship[3:,-1] - mars_vel_vector
-    deltaV2 = np.linalg.norm(DV2_vector)
+    shipDeltaV2 = np.linalg.norm(DV2_vector)
     
-    ship_mass = calculate_ship()[0]
-    propellant_expended = ship_mass * (1 - math.exp(-deltaV2 / (isp * g)))
+    propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
+    propellant_2 = (wet_mass - propellant_1) * (1 - math.exp(-shipDeltaV2 / (isp * g)))
+
+    global mass
+    global area
+
+    mass = wet_mass - propellant_1
+    area = sail_area
     
     # Plot it
     fig = plt.figure()
@@ -65,8 +86,11 @@ def main():
 
     if arrival_time is not None:
         print("Travel time (days): "+str(arrival_time/86400))
-        print("Delta V at end (km/s): "+str(deltaV2))
-        print("Propellant expenditure at end (kg): "+str(propellant_expended))
+        print("Delta V departing (km/s): "+str(shipDeltaV1))
+        print("Propellant expenditure arriving (t): "+str(propellant_1*1e-3))
+        print("Delta V arriving (km/s): "+str(shipDeltaV2))
+        print("Propellant expenditure arriving (t): "+str(propellant_2*1e-3))
+        print("Total propellant expenditure (t): "+str((propellant_1 + propellant_2)*1e-3))
 
     plt.show()
 
@@ -74,21 +98,6 @@ def reach_mars_event(t, state):
     x, y, z = state[:3]
     r = np.linalg.norm([x, y, z])
     return r - 228e6
-
-def calculate_ship():
-    """
-    Returns mass of ship and area of sail
-    """
-    sail_width = 16000 # m
-    sail_area = sail_width**2 # m^2
-    sail_density = 1400 # kg/m^3
-    sail_thickness = 2.5 * 1e-6 # 2.5 um to m
-    dry_mass = 100e3
-    payload_mass = 500e3
-    propellant_mass = 500e3
-    sail_mass = sail_area * sail_thickness * sail_density
-    ship_mass = dry_mass + payload_mass + sail_mass + propellant_mass
-    return ship_mass, sail_area
 
 reach_mars_event.terminal = True
 reach_mars_event.direction = 1 
@@ -108,7 +117,7 @@ def keplerian_propagator(init_r, init_v, tof, steps):
     # Return everything
     return sol.y, sol.t
 
-def ship_propagator(init_r, init_v, tof, steps):
+def ship_propagator(init_r, init_v, tof, steps, ship_mass, sail_area):
     """
     Function to propagate a given orbit
     """
@@ -117,8 +126,9 @@ def ship_propagator(init_r, init_v, tof, steps):
     # Array of time values
     tof_array = np.linspace(0,tof, num=steps)
     init_state = np.concatenate((init_r,init_v))
+    ship_dynamics = partial(ship_eoms, ship_mass=ship_mass, sail_area=sail_area)
     # Do the integration
-    sol = solve_ivp(fun = ship_eoms, t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol = 1e-12, atol = 1e-12, events=reach_mars_event)
+    sol = solve_ivp(fun = ship_dynamics, t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol = 1e-12, atol = 1e-12, events=reach_mars_event)
 
     mars_arrival_time = sol.t_events[0][0] if sol.t_events[0].size > 0 else None
 
@@ -148,7 +158,7 @@ def keplerian_eoms(t, state):
 
     return dx
 
-def ship_eoms(t, state):
+def ship_eoms(t, state, ship_mass, sail_area):
     """
     Equation of motion for 2body orbits
     """
@@ -165,8 +175,8 @@ def ship_eoms(t, state):
     au = 150e6 # km
     lightspeed = 299792458 # m/s
     rad_pressure = 2 * solar_constant / (lightspeed*(r/au)**2) # Pa
-    ship_mass = calculate_ship()[0]
-    sail_area = calculate_ship()[1]
+    ship_mass = mass
+    sail_area = area
     force = sail_area*rad_pressure
     
     acceleration = force/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
