@@ -11,13 +11,15 @@ def main():
     # Gravitational Constant times Earth mass, adjusted for kilometers
     # earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
+    g = 9.80665*1e-3 # km/s^2
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 100e3 # total capacity 1500e3
-    reactor_mass = 20e3 # rough estimate
-    wet_mass = dry_mass + payload_mass + propellant_mass + reactor_mass
+    propellant_mass = 1500e3 # total capacity 1500e3
+    engine_mass = 18144 # mass of nerva engine (kg)
+    wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass
     ship_mass = wet_mass
+    nervaIsp = 841
 
     earthRad = 150e6
     earthVel = (sun_mu/earthRad)**0.5
@@ -32,8 +34,11 @@ def main():
     integration_time = 24*60*60*365*3 # three years, arbitrarily high to ensure no cutoff
     integration_steps = 1000
 
-    shipInitVel = [0, earthVel, 0]
+    shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
+    shipInitVel = [0, earthVel+shipDeltaV1, 0]
     shipInitState = np.concatenate((earthInitPos, shipInitVel, [ship_mass]))
+
+    propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(nervaIsp*g))) # nerva propellant expended by departing burn (kg)
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
@@ -55,10 +60,32 @@ def main():
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
 
-    final_ship_mass = ship[-1, -1]
+    final_ship_mass = ship[-1, -1] # ship mass at end of plasma transfer
+    
+    # Final ship velocity ship[3:,-1]
+    final_ship = ship[0:3,-1]
+    final_x = final_ship[0]
+    final_y = final_ship[1]
+    unit_dir = [final_x/np.hypot(final_x,final_y), final_y/np.hypot(final_x,final_y)]
+    
     if arrival_time is not None:
+        mars_time_index = np.searchsorted(times, arrival_time)
+        mars_vel_vector = mars[3:6, mars_time_index]
+        DV2_vector = ship[3:6,-1] - mars_vel_vector
+        shipDeltaV2 = np.linalg.norm(DV2_vector)
+        final_mass = ship[6, -1]
+        propellant_2 = final_mass * (1 - math.exp(-shipDeltaV2 / (nervaIsp * g))) # nerva propellant
+
+        exhaust_v = calculate_ship(final_mass)[2]
+        plasmaDeltaV = exhaust_v * math.log(wet_mass/final_mass)
         print("Travel time (days): "+str(arrival_time/86400))
-    print("Propellant Expended (kg): "+str(wet_mass - final_ship_mass))
+        print("NTR Delta V Departing (km/s): "+str(shipDeltaV1))
+        print("Plasma Delta V (km/s): "+str(plasmaDeltaV))
+        print("NTR Delta V Arriving (km/s): "+str(shipDeltaV2))
+        print("NTR Propellant Expended Departing (t): "+str(propellant_1*1e-3))
+        print("Plasma Propellant Expended (t): "+str((wet_mass - final_mass)*1e-3))
+        print("NTR Propellant Expended Arriving (t): "+str(propellant_2*1e-3))
+        print("Total Propellant Expended (t): "+str((propellant_1 + wet_mass - final_mass + propellant_2)*1e-3))
 
     plt.show()
 
@@ -118,6 +145,19 @@ def keplerian_eoms(t, state):
 
     return dx
 
+def calculate_ship(ship_mass):
+    thrust_per_thruster = 2.08 # N
+    thrusters = 10
+    g = 9.80665
+
+    thrust = thrust_per_thruster * thrusters # newtons
+    acceleration = thrust/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
+    isp = 4163
+    exhaust_v = isp * g # m/s
+    mass_flow = thrust / exhaust_v
+
+    return acceleration, mass_flow, exhaust_v
+
 def ship_eoms(t, state):
     """
     Equation of motion for 2body orbits
@@ -126,21 +166,17 @@ def ship_eoms(t, state):
     # Extract values from init
     x, y, z, vx, vy, vz, ship_mass = state
     r_dot = np.array([vx, vy, vz])
+
+    sun_mu = 1.989e30*6.67e-20
     
     # Define r
     r = np.linalg.norm([x, y, z])
 
-    sun_mu = 1.989e30*6.67e-20
-    thrust_per_thruster = 2.08 # N
-    thrusters = 10
-    g = 9.80665
-    speed = np.linalg.norm([vx,vy])
+    acceleration = calculate_ship(ship_mass)[0]
 
-    thrust = thrust_per_thruster * thrusters # newtons
-    acceleration = thrust/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
-    isp = 4163
-    exhaust_v = isp * g # m/s
-    mass_flow = thrust / exhaust_v
+    mass_flow = calculate_ship(ship_mass)[1]
+
+    speed = np.linalg.norm([vx,vy])
     
     # Solve for the acceleration
     ax = - (sun_mu/r**3) * x + vx/speed * acceleration
