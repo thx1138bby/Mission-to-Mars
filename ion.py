@@ -135,7 +135,7 @@ def ship_eoms(t, state):
     beam_current = 2 # amperes
     efficiency = 0.9
     g = 9.80665
-    thrusters = 100 # number of thrusters
+    thrusters = 40 # number of thrusters
     voltage = 1500 # per thruster
     # wattage = voltage * beam_current
     speed = np.linalg.norm([vx,vy])
