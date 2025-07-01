@@ -14,7 +14,7 @@ def main():
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 110e3 # total capacity 1500e3
+    propellant_mass = 1500e3 # total capacity 1500e3
     reactor_mass = 20e3 # rough estimate
     wet_mass = dry_mass + payload_mass + propellant_mass + reactor_mass
     ship_mass = wet_mass
@@ -132,7 +132,7 @@ def ship_eoms(t, state):
 
     sun_mu = 1.989e30*6.67e-20
     thrust_per_thruster = 2.08 # N
-    thrusters = 6
+    thrusters = 10
     g = 9.80665
     speed = np.linalg.norm([vx,vy])
 
