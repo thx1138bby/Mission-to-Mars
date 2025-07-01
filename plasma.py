@@ -3,13 +3,6 @@ import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 import math
 
-dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
-payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-propellant_mass = 28e3 # total capacity 1500e3
-reactor_mass = 200e3 # rough estimate
-wet_mass = dry_mass + payload_mass + propellant_mass + reactor_mass
-ship_mass = wet_mass
-
 def main():
     """
     Main function
@@ -18,6 +11,13 @@ def main():
     # Gravitational Constant times Earth mass, adjusted for kilometers
     # earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
+
+    dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
+    payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
+    propellant_mass = 110e3 # total capacity 1500e3
+    reactor_mass = 20e3 # rough estimate
+    wet_mass = dry_mass + payload_mass + propellant_mass + reactor_mass
+    ship_mass = wet_mass
 
     earthRad = 150e6
     earthVel = (sun_mu/earthRad)**0.5
@@ -33,10 +33,11 @@ def main():
     integration_steps = 1000
 
     shipInitVel = [0, earthVel, 0]
+    shipInitState = np.concatenate((earthInitPos, shipInitVel, [ship_mass]))
 
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
-    ship, times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)                                   
+    ship, times, arrival_time = ship_propagator(shipInitState, integration_time, integration_steps)                                   
     # Plot it
     fig = plt.figure()
     # Define axes in that figure
@@ -54,9 +55,10 @@ def main():
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
 
+    final_ship_mass = ship[-1, -1]
     if arrival_time is not None:
         print("Travel time (days): "+str(arrival_time/86400))
-    print("Propellant Expended (t): "+str((wet_mass - ship_mass)/1e3))
+    print("Propellant Expended (kg): "+str(wet_mass - final_ship_mass))
 
     plt.show()
 
@@ -83,21 +85,14 @@ def keplerian_propagator(init_r, init_v, tof, steps):
     # Return everything
     return sol.y, sol.t
 
-def ship_propagator(init_r, init_v, tof, steps):
+def ship_propagator(init_state, tof, steps):
     """
     Function to propagate a given orbit
     """
-    # Time vector
     tspan = [0, tof]
-    # Array of time values
-    tof_array = np.linspace(0,tof, num=steps)
-    init_state = np.concatenate((init_r,init_v))
-    # Do the integration
-    sol = solve_ivp(fun = lambda t,x:ship_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol = 1e-12, atol = 1e-12, events=reach_mars_event)
-
+    tof_array = np.linspace(0, tof, num=steps)
+    sol = solve_ivp(fun=ship_eoms, t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol=1e-12, atol=1e-12, events=reach_mars_event)
     mars_arrival_time = sol.t_events[0][0] if sol.t_events[0].size > 0 else None
-
-    # Return everything
     return sol.y, sol.t, mars_arrival_time
 
 def keplerian_eoms(t, state):
@@ -129,19 +124,18 @@ def ship_eoms(t, state):
     """
     
     # Extract values from init
-    x, y, z, vx, vy, vz = state
+    x, y, z, vx, vy, vz, ship_mass = state
     r_dot = np.array([vx, vy, vz])
     
     # Define r
     r = np.linalg.norm([x, y, z])
-
-    global ship_mass
 
     sun_mu = 1.989e30*6.67e-20
     total_impulse = 1e9 # total impulse per thruster for 8000 s (Ns)
     thrust_per_thruster = total_impulse/(8000*3600)
     thrusters = 16
     g = 9.80665
+    speed = np.linalg.norm([vx,vy])
 
     thrust = thrust_per_thruster * thrusters # newtons
     acceleration = thrust/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
@@ -150,18 +144,14 @@ def ship_eoms(t, state):
     mass_flow = thrust / exhaust_v
     
     # Solve for the acceleration
-    ax = - (sun_mu/r**3) * x + vx/np.linalg.norm([vx,vy]) * acceleration
-    ay = - (sun_mu/r**3) * y + vy/np.linalg.norm([vx,vy]) * acceleration
-    az = - (sun_mu/r**3) * z
+    ax = - (sun_mu/r**3) * x + vx/speed * acceleration
+    ay = - (sun_mu/r**3) * y + vy/speed * acceleration
+    az = - (sun_mu / r**3) * z
 
-    ship_mass -= mass_flow
-
-    v_dot = np.array([ax, ay, az])
-
-    dx = np.append(r_dot, v_dot)
+    dm = -mass_flow
+    dx = np.array([vx, vy, vz, ax, ay, az, dm])
 
     return dx
-
 
 if __name__ == '__main__':
     main()
