@@ -35,25 +35,37 @@ def main():
     hohmann_isp = 350
     isp = 841 # isp of nerva
     exhaust_v = isp * g
-
-    # Delta V of Hohmann transfer (for reference)
-    hohmannDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
-    hohmannDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
-    hohmannDeltaV_net = hohmannDeltaV1-hohmannDeltaV2 # net delta v of ship (difference in orbital velocities)
     
-    propellant_1 = hohmann_mass * (1 - math.e**(-hohmannDeltaV1/(hohmann_isp*g))) # propellant expended by departing burn (kg) (same as Hohmann)
+    # Delta V of Hohmann transfer (for reference)
+    #hohmannDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
+    #print(hohmannDeltaV1)
+    
+    #propellant_1 = hohmann_mass * (1 - math.e**(-hohmannDeltaV1/(hohmann_isp*g))) # propellant expended by departing burn (kg) (same as Hohmann)
+    
+    propellant_1 = 1100e3 # kg
 
-    # Delta V of ship
+    # Delta V of ship departing
     shipDeltaV1 = exhaust_v * math.log(wet_mass / (wet_mass - propellant_1)) # delta v from departing burn (km/s)
-    shipDeltaV2 = shipDeltaV1 - hohmannDeltaV_net # delta v from arriving burn (km/s)
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
-
-    propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
-    propellant_total = propellant_1 + propellant_2
-
+    
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time*2, integration_steps)
     mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time*3, integration_steps)
     ship, times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
+
+    # Delta V of ship arriving
+    final_ship = ship[0:3,-1]
+    final_x = final_ship[0]
+    final_y = final_ship[1]
+    unit_dir = [final_x/np.hypot(final_x,final_y), final_y/np.hypot(final_x,final_y)]
+    mars_full, _ = keplerian_propagator(marsInitPos, marsInitVel, arrival_time, 10)
+    mars_arrival_vel = mars_full[3:, -1]  # true velocity vector at arrival
+    DV2_vector = ship[3:,-1] - mars_arrival_vel
+    shipDeltaV2 = np.linalg.norm(DV2_vector)
+
+    m_after_burn1 = wet_mass - propellant_1
+    m_after_burn2 = m_after_burn1 / math.exp(shipDeltaV2 / (isp * g))
+    propellant_2 = m_after_burn1 - m_after_burn2
+    
     # Plot it
     fig = plt.figure()
     # Define axes in that figure
@@ -76,7 +88,7 @@ def main():
     print("Delta V at Arrival (km/s): "+str(shipDeltaV2))
     print("Departing Propellant Expenditure (t): "+str(propellant_1/1e3))
     print("Arriving Propellant Expenditure (t): "+str(propellant_2/1e3))
-    print("Total Propellant Expenditure (t): "+str(propellant_total/1e3))
+    print("Total Propellant Expenditure (t): "+str((propellant_1+propellant_2)/1e3))
     
     plt.show()
 
@@ -142,7 +154,6 @@ def keplerian_eoms(t, state):
     dx = np.append(r_dot, v_dot)
 
     return dx
-
 
 if __name__ == '__main__':
     main()
