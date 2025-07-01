@@ -131,15 +131,14 @@ def ship_eoms(t, state):
     r = np.linalg.norm([x, y, z])
 
     sun_mu = 1.989e30*6.67e-20
-    total_impulse = 1e9 # total impulse per thruster for 8000 s (Ns)
-    thrust_per_thruster = total_impulse/(8000*3600)
-    thrusters = 16
+    thrust_per_thruster = 2.08 # N
+    thrusters = 6
     g = 9.80665
     speed = np.linalg.norm([vx,vy])
 
     thrust = thrust_per_thruster * thrusters # newtons
     acceleration = thrust/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
-    isp = 5000
+    isp = 4163
     exhaust_v = isp * g # m/s
     mass_flow = thrust / exhaust_v
     
