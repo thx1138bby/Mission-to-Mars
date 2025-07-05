@@ -13,18 +13,24 @@ def main():
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
     g = 9.80665*1e-3 # km/s^2
 
+    travelTime = 47.97593406427982 # days
+    shipDeg = 60.71 # angle of ship at end
+
     earthRad = 150e6
     earthVel = (sun_mu/earthRad)**0.5
     marsRad = 228e6
+    marsAngDisp = 360/687*travelTime # degrees
+    marsDeg = shipDeg - marsAngDisp
+    marsAng = marsDeg*math.pi/180
     marsVel = (sun_mu/marsRad)**0.5
     
     earthInitPos = np.array([earthRad, 0, 0])
     earthInitVel = np.array([0, earthVel, 0])
-    marsInitPos = np.array([marsRad, 0, 0])
-    marsInitVel = np.array([0, marsVel, 0])
+    marsInitPos = np.array([marsRad*math.cos(marsAng), marsRad*math.sin(marsAng), 0])
+    marsInitVel = np.array([marsVel*math.cos(marsAng+math.pi/2), marsVel*math.sin(marsAng+math.pi/2), 0])
 
-    integration_time = 24*60*60*365*3
-    integration_steps = 100000
+    integration_time = travelTime*86400+1
+    integration_steps = 1000
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
@@ -43,15 +49,15 @@ def main():
     
     #propellant_1 = hohmann_mass * (1 - math.e**(-hohmannDeltaV1/(hohmann_isp*g))) # propellant expended by departing burn (kg) (same as Hohmann)
     
-    propellant_1 = 1041e3 # kg
+    propellant_1 = 11396.0*pulse_unit_mass # kg
     pulse_units_1 = propellant_1 // pulse_unit_mass + 1
 
     # Delta V of ship departing
     shipDeltaV1 = exhaust_v * math.log(wet_mass / (wet_mass - propellant_1)) # delta v from departing burn (km/s)
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
     
-    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time*2, integration_steps)
-    mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time*3, integration_steps)
+    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
+    mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
     ship, times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
 
     # Delta V of ship arriving
@@ -86,7 +92,38 @@ def main():
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
 
+    # Final ship velocity ship[3:,-1]
+    final_ship = ship[0:3,-1]
+    final_x = final_ship[0]
+    final_y = final_ship[1]
+
+    # Angle from +X axis (in radians)
+    theta_rad = np.arctan2(final_y, final_x)
+
+    # Convert to degrees
+    theta_deg = np.degrees(theta_rad)
+
+    # Ensure it's in [0, 360)
+    if theta_deg < 0:
+        theta_deg += 360
+
+    print(f"Ship angle from +X axis: {theta_deg:.2f} degrees")
+    
     if arrival_time is not None:
+
+        # Get final positions
+        final_ship_pos = ship[0:3, -1]  # X, Y, Z of Earth at final time
+        final_mars_pos = mars[0:3, -1]    # X, Y, Z of Mars at final time
+
+        final_mars_x = final_mars_pos[0]
+        final_mars_y = final_mars_pos[1]
+        mars_theta_rad = np.arctan2(final_mars_y, final_mars_x)
+        mars_theta_deg = np.degrees(mars_theta_rad)
+        print("Ship - Mars Angle (deg): "+str(theta_deg - mars_theta_deg))
+
+        # Compute distance in km
+        distance = np.linalg.norm(final_mars_pos - final_ship_pos)
+        print("Ship to Mars Distance (km): "+str(distance))
         print("Transfer Time (days): "+str(arrival_time/86400))
         print("Delta V at Departure (km/s): "+str(shipDeltaV1))
         print("Delta V at Arrival (km/s): "+str(shipDeltaV2))
