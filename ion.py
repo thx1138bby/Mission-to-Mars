@@ -15,7 +15,7 @@ def main():
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 301e3 # total capacity 1500e3
+    propellant_mass = 500e3 # total capacity 1500e3
     engine_mass = 18144 # mass of nerva engine (kg)
     wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass
     nervaIsp = 841
@@ -29,6 +29,7 @@ def main():
     marsAngDisp = 360/687*travelTime # degrees
     marsDeg = shipDeg - marsAngDisp
     marsAng = marsDeg*math.pi/180
+    marsAng = 0
     marsVel = (sun_mu/marsRad)**0.5
     
     earthInitPos = np.array([earthRad, 0, 0])
@@ -36,7 +37,7 @@ def main():
     marsInitPos = np.array([marsRad*math.cos(marsAng), marsRad*math.sin(marsAng), 0])
     marsInitVel = np.array([marsVel*math.cos(marsAng+math.pi/2), marsVel*math.sin(marsAng+math.pi/2), 0])
 
-    integration_time = travelTime*86400+1
+    integration_time = 365*24*60*60
     integration_steps = 1000
 
     shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
@@ -46,10 +47,13 @@ def main():
     ship_mass = wet_mass - propellant_1
     shipInitState = np.concatenate((earthInitPos, shipInitVel, [ship_mass]))
 
-    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
-    mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
-    ship, times, arrival_time = ship_propagator(shipInitState, integration_time, integration_steps)
-    
+    ship, ship_times, arrival_time = ship_propagator(shipInitState, integration_time, integration_steps)
+
+    mars_ToF, angular_velocity = calculate_mars_angle(ship, marsRad, sun_mu)
+
+    earth, times = keplerian_propagator(earthInitPos, earthInitVel, arrival_time, integration_steps)
+    mars, times = keplerian_propagator(marsInitPos, marsInitVel, mars_ToF, integration_steps)
+
     # Plot it
     fig = plt.figure()
     # Define axes in that figure
@@ -66,6 +70,8 @@ def main():
     ax.yaxis.set_tick_params(labelsize=7)
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
+
+    
 
     # Final ship velocity ship[3:,-1]
     final_ship = ship[0:3,-1]
@@ -100,14 +106,12 @@ def main():
         distance = np.linalg.norm(final_mars_pos - final_ship_pos)
         print("Ship to Mars Distance (km): "+str(distance))
 
-        mars_time_index = np.searchsorted(times, arrival_time)
-        mars_vel_vector = mars[3:6, mars_time_index]
-        DV2_vector = ship[3:6,-1] - mars_vel_vector
+        DV2_vector = [mars[3][-1]-ship[3][-1], mars[4][-1]-ship[4][-1]]
         shipDeltaV2 = np.linalg.norm(DV2_vector)
         final_mass = ship[6, -1]
         propellant_2 = final_mass * (1 - math.exp(-shipDeltaV2 / (nervaIsp * g))) # nerva propellant
 
-        exhaust_v = calculate_ship(final_mass)[2]
+        exhaust_v = calculate_ship(final_mass)[2]*1e-3
         ionDeltaV = exhaust_v * math.log(ship_mass/final_mass)
         print("Travel time (days): "+str(arrival_time/86400))
         print("NTR Delta V Departing (km/s): "+str(shipDeltaV1))
@@ -138,7 +142,7 @@ def keplerian_propagator(init_r, init_v, tof, steps):
     tof_array = np.linspace(0,tof, num=steps)
     init_state = np.concatenate((init_r,init_v))
     # Do the integration
-    sol = solve_ivp(fun = lambda t,x:keplerian_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol = 1e-12, atol = 1e-12)
+    sol = solve_ivp(fun = lambda t,x:keplerian_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", rtol = 1e-12, atol = 1e-12)
 
     # Return everything
     return sol.y, sol.t
@@ -149,7 +153,7 @@ def ship_propagator(init_state, tof, steps):
     """
     tspan = [0, tof]
     tof_array = np.linspace(0, tof, num=steps)
-    sol = solve_ivp(fun=ship_eoms, t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol=1e-12, atol=1e-12, events=reach_mars_event)
+    sol = solve_ivp(fun=ship_eoms, t_span=tspan, y0=init_state, method="DOP853", rtol=1e-12, atol=1e-12, events=reach_mars_event)
     mars_arrival_time = sol.t_events[0][0] if sol.t_events[0].size > 0 else None
     return sol.y, sol.t, mars_arrival_time
 
@@ -226,6 +230,32 @@ def ship_eoms(t, state):
     dx = np.array([vx, vy, vz, ax, ay, az, dm])
 
     return dx
+
+def calculate_mars_angle(ship_traj, marsRad, sun_mu):
+    """
+    Function to calculate the init angle of mars to accomplish rendezvous
+    """
+    final_x = ship_traj[0][-1]
+    final_y = ship_traj[1][-1]
+
+    # Angle from +X axis (in radians)
+    theta_rad = np.arctan2(final_y, final_x)
+
+    # Ensure it's in [0, 360)
+    if theta_rad < 0:
+        theta_rad += 2*np.pi
+
+    # What is the Time of Flight for Mars
+    # To accomplish this angle
+    period = 2*np.pi*np.sqrt(marsRad**3/sun_mu) 
+
+    angular_velocity = (2*np.pi)/period #radians/second
+    # What time offset accomplishes this angular offset
+    time_offset = theta_rad/angular_velocity
+    
+    print(f"Ship angle from +X axis: {theta_rad:.2f} rad")
+
+    return time_offset, angular_velocity
 
 if __name__ == '__main__':
     main()
