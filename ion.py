@@ -15,7 +15,7 @@ def main():
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 500e3 # total capacity 1500e3
+    propellant_mass = 400e3 # total capacity 1500e3
     engine_mass = 18144 # mass of nerva engine (kg)
     wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass
     nervaIsp = 841
