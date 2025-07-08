@@ -13,43 +13,39 @@ def main():
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
     g = 9.80665*1e-3 # km/s^2
 
-    travelTime = 259.38719214052634 # days
-    shipDeg = 180 # angle of ship at end
+    dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
+    payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
+    propellant_mass = 1013e3
+    wet_mass = dry_mass + payload_mass + propellant_mass
+    isp = 350 # approximation in s according to Elon Musk's tweet
 
     earthRad = 150e6
     earthVel = (sun_mu/earthRad)**0.5
     marsRad = 228e6
-    marsAngDisp = 360/687*travelTime # degrees
-    marsDeg = shipDeg - marsAngDisp
-    marsAng = marsDeg*math.pi/180
     marsVel = (sun_mu/marsRad)**0.5
     
     earthInitPos = np.array([earthRad, 0, 0])
     earthInitVel = np.array([0, earthVel, 0])
-    marsInitPos = np.array([marsRad*math.cos(marsAng), marsRad*math.sin(marsAng), 0])
-    marsInitVel = np.array([marsVel*math.cos(marsAng+math.pi/2), marsVel*math.sin(marsAng+math.pi/2), 0])
+    marsInitPos = np.array([marsRad, 0, 0])
+    marsInitVel = np.array([0, marsVel, 0])
 
-    integration_time = travelTime*86400+1
+    integration_time = (2*math.pi/((sun_mu)**0.5)*(((earthRad+marsRad)/2)**1.5))/2
     integration_steps = 1000
 
     # Delta V of ship (Hohmann)
     shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
     shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
     shipInitVel = [0, earthVel+shipDeltaV1, 0]
-
-    dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
-    payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 1500e3
-    wet_mass = dry_mass + payload_mass + propellant_mass
-    isp = 350 # approximation in s according to Elon Musk's tweet
     
     propellant_1 = wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g))) # propellant expended by departing burn (kg)
     propellant_2 = (wet_mass - propellant_1) * (1 - math.e**(-shipDeltaV2/(isp*g))) # propellant expended by arriving burn (kg)
     propellant_total = propellant_1 + propellant_2
 
-    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
-    mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
     ship, times = keplerian_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
+    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
+    mars_tof, angular_velocity = calculate_mars_angle(ship, marsRad, sun_mu)
+    mars, times = keplerian_propagator(marsInitPos, marsInitVel, mars_tof, integration_steps)
+    
     # Plot it
     fig = plt.figure()
     # Define axes in that figure
@@ -82,7 +78,7 @@ def main():
     if theta_deg < 0:
         theta_deg += 360
 
-    print(f"Ship angle from +X axis: {theta_deg:.2f} degrees")
+    print("Ship angle from +X axis (degrees): "+str(theta_deg))
 
     # Get final positions
     final_ship_pos = ship[0:3, -1]  # X, Y, Z of Earth at final time
@@ -118,7 +114,7 @@ def keplerian_propagator(init_r, init_v, tof, steps):
     tof_array = np.linspace(0,tof, num=steps)
     init_state = np.concatenate((init_r,init_v))
     # Do the integration
-    sol = solve_ivp(fun = lambda t,x:keplerian_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol = 1e-12, atol = 1e-12)
+    sol = solve_ivp(fun = lambda t,x:keplerian_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", rtol = 1e-12, atol = 1e-12)
 
     # Return everything
     return sol.y, sol.t
@@ -147,6 +143,29 @@ def keplerian_eoms(t, state):
 
     return dx
 
+def calculate_mars_angle(ship_traj, marsRad, sun_mu):
+    """
+    Function to calculate the init angle of mars to accomplish rendezvous
+    """
+    final_x = ship_traj[0][-1]
+    final_y = ship_traj[1][-1]
+
+    # Angle from +X axis (in radians)
+    theta_rad = np.arctan2(final_y, final_x)
+
+    # Ensure it's in [0, 360)
+    if theta_rad < 0:
+        theta_rad += 2*np.pi
+
+    # What is the Time of Flight for Mars
+    # To accomplish this angle
+    period = 2*np.pi*np.sqrt(marsRad**3/sun_mu) 
+
+    angular_velocity = (2*np.pi)/period #radians/second
+    # What time offset accomplishes this angular offset
+    time_offset = theta_rad/angular_velocity
+
+    return time_offset, angular_velocity
 
 if __name__ == '__main__':
     main()
