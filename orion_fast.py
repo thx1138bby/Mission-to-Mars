@@ -13,48 +13,42 @@ def main():
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
     g = 9.80665*1e-3 # km/s^2
 
-    travelTime = 259.38719214052634 # days
-    shipDeg = 180 # angle of ship at end
-
-    earthRad = 150e6
-    earthVel = (sun_mu/earthRad)**0.5
-    marsRad = 228e6
-    marsAngDisp = 360/687*travelTime # degrees
-    marsDeg = shipDeg - marsAngDisp
-    marsAng = marsDeg*math.pi/180
-    marsVel = (sun_mu/marsRad)**0.5
-    
-    earthInitPos = np.array([earthRad, 0, 0])
-    earthInitVel = np.array([0, earthVel, 0])
-    marsInitPos = np.array([marsRad*math.cos(marsAng), marsRad*math.sin(marsAng), 0])
-    marsInitVel = np.array([marsVel*math.cos(marsAng+math.pi/2), marsVel*math.sin(marsAng+math.pi/2), 0])
-
-    integration_time = travelTime*86400+1
-    integration_steps = 1000
-
-    # Delta V of ship (Hohmann)
-    shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
-    shipDeltaV2 = ((sun_mu/marsRad)**0.5) * (1 - (2*earthRad/(earthRad+marsRad))**0.5) # delta v from arriving burn (km/s)
-    shipInitVel = [0, earthVel+shipDeltaV1, 0]
-
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
     isp = 3350
     exhaust_v = 32.9 # km/s
+    propellant_mass = 1500e3 # mass of all pulse units at start
     pulse_unit_mass = 79 # mass in kg of one pulse unit
-    pulse_unit_number = 814 # number of pulse units at start
-    propellant_mass = pulse_unit_mass * pulse_unit_number # mass of all pulse units at start
+    pulse_unit_number = propellant_mass // pulse_unit_mass + 1 # number of pulse units at start
     engine_mass = 107900
     raptor_mass = 1630 # mass of one raptor engine
     wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass - raptor_mass * 6
-    
-    pulse_units_1 = (wet_mass * (1 - math.e**(-shipDeltaV1/(isp*g)))) // pulse_unit_mass + 1 # number of pulse units expended by departing burn
-    pulse_units_2 = ((wet_mass - pulse_units_1*pulse_unit_mass) * (1 - math.e**(-shipDeltaV2/(isp*g)))) // pulse_unit_mass + 1 # number of pulse units expended by arriving burn
-    pulse_units_total = pulse_units_1 + pulse_units_2
 
-    earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
-    mars, times = keplerian_propagator(marsInitPos, marsInitVel, integration_time, integration_steps)
-    ship, times = keplerian_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
+    earthRad = 150e6
+    earthVel = (sun_mu/earthRad)**0.5
+    marsRad = 228e6
+    marsVel = (sun_mu/marsRad)**0.5
+    
+    earthInitPos = np.array([earthRad, 0, 0])
+    earthInitVel = np.array([0, earthVel, 0])
+    marsInitPos = np.array([marsRad, 0, 0])
+    marsInitVel = np.array([0, marsVel, 0])
+
+    integration_time = 365*24*60*60
+    integration_steps = 1000
+    
+    propellant_1 = 11587.0*pulse_unit_mass # kg
+    pulse_units_1 = propellant_1 // pulse_unit_mass + 1
+
+    # Delta V of ship departing
+    shipDeltaV1 = exhaust_v * math.log(wet_mass / (wet_mass - propellant_1)) # delta v from departing burn (km/s)
+    shipInitVel = [0, earthVel+shipDeltaV1, 0]
+    
+    ship, ship_times, arrival_time = ship_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
+    mars_ToF, angular_velocity = calculate_mars_angle(ship, marsRad, sun_mu)
+    earth, times = keplerian_propagator(earthInitPos, earthInitVel, arrival_time, integration_steps)
+    mars, times = keplerian_propagator(marsInitPos, marsInitVel, mars_ToF, integration_steps)
+    
     # Plot it
     fig = plt.figure()
     # Define axes in that figure
@@ -87,14 +81,24 @@ def main():
     if theta_deg < 0:
         theta_deg += 360
 
-    print(f"Ship angle from +X axis: {theta_deg:.2f} degrees")
+    print("Ship angle from +X axis (degrees): "+str(theta_deg)) 
 
     # Get final positions
     final_ship_pos = ship[0:3, -1]  # X, Y, Z of Earth at final time
     final_mars_pos = mars[0:3, -1]    # X, Y, Z of Mars at final time
-
     final_mars_x = final_mars_pos[0]
     final_mars_y = final_mars_pos[1]
+
+    # Delta V of ship arriving
+    final_ship = ship[0:3,-1]
+    DV2_vector = [mars[3][-1]-ship[3][-1], mars[4][-1]-ship[4][-1]]
+    shipDeltaV2 = np.linalg.norm(DV2_vector)
+
+    m_after_burn1 = wet_mass - propellant_1
+    m_after_burn2 = m_after_burn1 / math.exp(shipDeltaV2 / (isp * g))
+    propellant_2 = m_after_burn1 - m_after_burn2
+    pulse_units_2 = propellant_2 // pulse_unit_mass + 1
+    
     mars_theta_rad = np.arctan2(final_mars_y, final_mars_x)
     mars_theta_deg = np.degrees(mars_theta_rad)
     print("Ship - Mars Angle (deg): "+str(theta_deg - mars_theta_deg))
@@ -102,16 +106,23 @@ def main():
     # Compute distance in km
     distance = np.linalg.norm(final_mars_pos - final_ship_pos)
     print("Ship to Mars Distance (km): "+str(distance))
-
-    print("Transfer Time (days): "+str(integration_time/86400))
+    if arrival_time is not None:
+        print("Transfer Time (days): "+str(arrival_time/86400))
     print("Delta V at Departure (km/s): "+str(shipDeltaV1))
     print("Delta V at Arrival (km/s): "+str(shipDeltaV2))
     print("Departing Pulse Unit Expenditure: "+str(pulse_units_1))
     print("Arriving Pulse Unit Expenditure: "+str(pulse_units_2))
-    print("Total Pulse Unit Expenditure: "+str(pulse_units_total))
+    print("Total Pulse Unit Expenditure: "+str(pulse_units_1+pulse_units_2))
     
     plt.show()
-    
+
+def reach_mars_event(t, state):
+    x, y, z = state[:3]
+    r = np.linalg.norm([x, y, z])
+    return r - 228e6
+
+reach_mars_event.terminal = True
+reach_mars_event.direction = 0 
 
 def keplerian_propagator(init_r, init_v, tof, steps):
     """
@@ -123,11 +134,27 @@ def keplerian_propagator(init_r, init_v, tof, steps):
     tof_array = np.linspace(0,tof, num=steps)
     init_state = np.concatenate((init_r,init_v))
     # Do the integration
-    sol = solve_ivp(fun = lambda t,x:keplerian_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", t_eval=tof_array, rtol = 1e-12, atol = 1e-12)
+    sol = solve_ivp(fun = lambda t,x:keplerian_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", rtol = 1e-12, atol = 1e-12)
 
     # Return everything
     return sol.y, sol.t
 
+def ship_propagator(init_r, init_v, tof, steps):
+    """
+    Function to propagate a given orbit
+    """
+    # Time vector
+    tspan = [0, tof]
+    # Array of time values
+    tof_array = np.linspace(0,tof, num=steps)
+    init_state = np.concatenate((init_r,init_v))
+    # Do the integration
+    sol = solve_ivp(fun = lambda t,x:keplerian_eoms(t,x), t_span=tspan, y0=init_state, method="DOP853", rtol = 1e-12, atol = 1e-12, events=reach_mars_event)
+
+    mars_arrival_time = sol.t_events[0][0] if sol.t_events[0].size > 0 else None
+
+    # Return everything
+    return sol.y, sol.t, mars_arrival_time
 
 def keplerian_eoms(t, state):
     """
@@ -152,6 +179,29 @@ def keplerian_eoms(t, state):
 
     return dx
 
+def calculate_mars_angle(ship_traj, marsRad, sun_mu):
+    """
+    Function to calculate the init angle of mars to accomplish rendezvous
+    """
+    final_x = ship_traj[0][-1]
+    final_y = ship_traj[1][-1]
+
+    # Angle from +X axis (in radians)
+    theta_rad = np.arctan2(final_y, final_x)
+
+    # Ensure it's in [0, 360)
+    if theta_rad < 0:
+        theta_rad += 2*np.pi
+
+    # What is the Time of Flight for Mars
+    # To accomplish this angle
+    period = 2*np.pi*np.sqrt(marsRad**3/sun_mu) 
+
+    angular_velocity = (2*np.pi)/period #radians/second
+    # What time offset accomplishes this angular offset
+    time_offset = theta_rad/angular_velocity
+
+    return time_offset, angular_velocity
 
 if __name__ == '__main__':
     main()
