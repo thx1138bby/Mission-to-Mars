@@ -13,16 +13,16 @@ def main():
     # earth_mu = 398600.441500000
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
     g = 9.80665*1e-3 # km/s^2
-    isp = 350
+    isp = 380
 
-    sail_width = 300 # m
+    sail_width = 1000 # m
     sail_area = sail_width**2 # m^2
     sail_density = 1400 # kg/m^3
     sail_thickness = 2.5 * 1e-6 # 2.5 um to m
     
     dry_mass = 100e3
     payload_mass = 150e3
-    propellant_mass = 1025e3
+    propellant_mass = 935e3
     sail_mass = sail_area * sail_thickness * sail_density
     wet_mass = dry_mass + payload_mass + sail_mass + propellant_mass
 
@@ -190,10 +190,9 @@ def ship_eoms(t, state, ship_mass, sail_area):
     r = np.linalg.norm([x, y, z])
     
     sun_mu = 1.989e30*6.67e-20
-    solar_constant = 1361 # w/m^2
-    au = 150e6 # km
-    lightspeed = 299792458 # m/s
-    rad_pressure = 2 * solar_constant / (lightspeed*(r/au)**2) # Pa
+    pressure_1_au = 4.57e-6 # N
+    au = 150e9 # m
+    rad_pressure = pressure_1_au*(au/(r*1e3)) # Pa
     force = sail_area*rad_pressure
     
     acceleration = force/ship_mass*1e-3 # m/s^2 * 1e-3 km/m
