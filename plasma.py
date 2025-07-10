@@ -15,7 +15,7 @@ def main():
 
     dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
     payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 380e3 # total capacity 1500e3
+    propellant_mass = 1193e3 # total capacity 1500e3
     engine_mass = 18144 # mass of nerva engine (kg)
     wet_mass = dry_mass + payload_mass + propellant_mass + engine_mass
     nervaIsp = 841
@@ -169,11 +169,11 @@ def keplerian_eoms(t, state):
     return dx
 
 def calculate_ship(ship_mass):
-    u0 = 4*math.pi*1e-7
     rAnode = 0.026
     rCathode = 0.0127
-    current = 1500
-    thrust_per_thruster = u0/(4*math.pi)*(math.log(rAnode/rCathode)+3/4)*current**2
+    field = 0.3 # T
+    current = 1500 # A
+    thrust_per_thruster = 1/2**0.5*field*current*rAnode*(1 - 3/2*(rCathode/rAnode)**2)
     thrusters = 40
     g = 9.80665
 
