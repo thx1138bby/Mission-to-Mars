@@ -30,7 +30,7 @@ def main():
     marsInitPos = np.array([marsRad, 0, 0])
     marsInitVel = np.array([0, marsVel, 0])
 
-    integration_time = 365*24*60*60
+    integration_time = 365*24*60*60*5
     integration_steps = 1000
 
     shipDeltaV1 = ((sun_mu/earthRad)**0.5) * ((2*marsRad/(earthRad+marsRad))**0.5 - 1) # delta v from departing burn (km/s)
@@ -117,6 +117,19 @@ def reach_mars_event(t, state):
     r = np.linalg.norm([x, y, z])
     return r - 228e6
 
+def ellipse_cross_event(t, state):
+    # Mars Characteristics
+    a_target = 228e6       # km
+    e_target = 0.09
+    c = a_target*e_target
+    x, y, z = state[:3]
+    F2x = -c
+    F2y = 0.0
+    g = np.hypot(x, y) + np.hypot(x - F2x, y - F2y) - 2.0 * a_target
+    return g
+ellipse_cross_event.terminal  = True     # stop at the first crossing
+ellipse_cross_event.direction = 1       # assume you start outside (g>0)
+
 reach_mars_event.terminal = True
 reach_mars_event.direction = 1 
 
@@ -141,7 +154,7 @@ def ship_propagator(init_state, tof, steps):
     """
     tspan = [0, tof]
     tof_array = np.linspace(0, tof, num=steps)
-    sol = solve_ivp(fun=ship_eoms, t_span=tspan, y0=init_state, method="DOP853", rtol=1e-12, atol=1e-12, events=reach_mars_event)
+    sol = solve_ivp(fun=ship_eoms, t_span=tspan, y0=init_state, method="DOP853", rtol=1e-12, atol=1e-12, events=ellipse_cross_event)
     mars_arrival_time = sol.t_events[0][0] if sol.t_events[0].size > 0 else None
     return sol.y, sol.t, mars_arrival_time
 
@@ -173,7 +186,7 @@ def calculate_ship(ship_mass):
     beam_current = 2 # amperes
     efficiency = 0.9
     g = 9.80665
-    thrusters = 40 # number of thrusters
+    thrusters = 400 # number of thrusters
     voltage = 1500 # per thruster
 
     thrust = 1.65 * gamma * beam_current * (voltage)**0.5 * 1e-3 * thrusters # newtons (122.4 mN per thruster)
