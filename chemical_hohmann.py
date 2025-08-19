@@ -13,11 +13,11 @@ def main():
     sun_mu = 1.989e30*6.67e-20 # * 1e-9 km^3/m^3
     g = 9.80665*1e-3 # km/s^2
 
-    dry_mass = 100e3 # approximation in kg according to published interview with Elon Musk
-    payload_mass = 150e3 # this and propellant mass found on SpaceX web page on Starship
-    propellant_mass = 1013e3
+    dry_mass = 130e3
+    payload_mass = 90e3
+    propellant_mass = 900e3
     wet_mass = dry_mass + payload_mass + propellant_mass
-    isp = 350 # approximation in s according to Elon Musk's tweet
+    isp = 351.5
 
     earthRad = 150e6
     earthVel = (sun_mu/earthRad)**0.5
@@ -26,8 +26,6 @@ def main():
     
     earthInitPos = np.array([earthRad, 0, 0])
     earthInitVel = np.array([0, earthVel, 0])
-    marsInitPos = np.array([marsRad, 0, 0])
-    marsInitVel = np.array([0, marsVel, 0])
 
     integration_time = (2*math.pi/((sun_mu)**0.5)*(((earthRad+marsRad)/2)**1.5))/2
     integration_steps = 1000
@@ -42,9 +40,13 @@ def main():
     propellant_total = propellant_1 + propellant_2
 
     ship, times = keplerian_propagator(earthInitPos, shipInitVel, integration_time, integration_steps)
+    shipFinalPos = ship[0:3, -1]  # X, Y, Z of Earth at final time
     earth, times = keplerian_propagator(earthInitPos, earthInitVel, integration_time, integration_steps)
-    mars_tof, angular_velocity = calculate_mars_angle(ship, marsRad, sun_mu)
-    mars, times = keplerian_propagator(marsInitPos, marsInitVel, mars_tof, integration_steps)
+    
+    marsCos = shipFinalPos[0]/marsRad
+    marsSin = shipFinalPos[1]/marsRad
+    marsInitVel = np.array([-marsVel*marsSin, marsVel*marsCos, 0])
+    mars, times = keplerian_propagator(shipFinalPos, marsInitVel, -integration_time, integration_steps)
     
     # Plot it
     fig = plt.figure()
@@ -62,37 +64,7 @@ def main():
     ax.yaxis.set_tick_params(labelsize=7)
     ax.zaxis.set_tick_params(labelsize=7)
     ax.set_aspect('equal', adjustable='box')
-
-    # Final ship velocity ship[3:,-1]
-    final_ship = ship[0:3,-1]
-    final_x = final_ship[0]
-    final_y = final_ship[1]
-
-    # Angle from +X axis (in radians)
-    theta_rad = np.arctan2(final_y, final_x)
-
-    # Convert to degrees
-    theta_deg = np.degrees(theta_rad)
-
-    # Ensure it's in [0, 360)
-    if theta_deg < 0:
-        theta_deg += 360
-
-    print("Ship angle from +X axis (degrees): "+str(theta_deg))
-
-    # Get final positions
-    final_ship_pos = ship[0:3, -1]  # X, Y, Z of Earth at final time
-    final_mars_pos = mars[0:3, -1]    # X, Y, Z of Mars at final time
-
-    final_mars_x = final_mars_pos[0]
-    final_mars_y = final_mars_pos[1]
-    mars_theta_rad = np.arctan2(final_mars_y, final_mars_x)
-    mars_theta_deg = np.degrees(mars_theta_rad)
-    print("Ship - Mars Angle (deg): "+str(theta_deg - mars_theta_deg))
-
-    # Compute distance in km
-    distance = np.linalg.norm(final_mars_pos - final_ship_pos)
-    print("Ship to Mars Distance (km): "+str(distance))
+    ax.view_init(elev=90, azim=-90)
 
     print("Transfer Time (days): "+str(integration_time/86400))
     print("Delta V at Departure (km/s): "+str(shipDeltaV1))
@@ -119,7 +91,6 @@ def keplerian_propagator(init_r, init_v, tof, steps):
     # Return everything
     return sol.y, sol.t
 
-
 def keplerian_eoms(t, state):
     """
     Equation of motion for 2body orbits
@@ -142,30 +113,6 @@ def keplerian_eoms(t, state):
     dx = np.append(r_dot, v_dot)
 
     return dx
-
-def calculate_mars_angle(ship_traj, marsRad, sun_mu):
-    """
-    Function to calculate the init angle of mars to accomplish rendezvous
-    """
-    final_x = ship_traj[0][-1]
-    final_y = ship_traj[1][-1]
-
-    # Angle from +X axis (in radians)
-    theta_rad = np.arctan2(final_y, final_x)
-
-    # Ensure it's in [0, 360)
-    if theta_rad < 0:
-        theta_rad += 2*np.pi
-
-    # What is the Time of Flight for Mars
-    # To accomplish this angle
-    period = 2*np.pi*np.sqrt(marsRad**3/sun_mu) 
-
-    angular_velocity = (2*np.pi)/period #radians/second
-    # What time offset accomplishes this angular offset
-    time_offset = theta_rad/angular_velocity
-
-    return time_offset, angular_velocity
 
 if __name__ == '__main__':
     main()
