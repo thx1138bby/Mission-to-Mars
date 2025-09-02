@@ -5,7 +5,7 @@ import math
 
 def main():
     """
-    Main function
+    Main function to simulate a chemical rocket Hohmann transfer from Earth to Mars
     """
     
     # Gravitational Constant times Earth mass, adjusted for kilometers
