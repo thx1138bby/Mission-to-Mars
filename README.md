@@ -16,3 +16,5 @@ propellant mass consumption. These results are analyzed and ranked to determine 
 different systems would compare in performance in an actual mission, specifically in the 
 aforementioned criteria of travel time and propellant expenditure. 
 
+## Execution
+Each of these files simulates a different transfer scenario from Earth to Mars. To execute, run each of the files. For the High-thrust engines, an impulsive delta-V is applied at the beginning and end of the transfer arcs. During the transfer, the spacecraft is assumed to be under the 2-body gravitational acceleration of the Sun. For the simulations utilizing low-thrust, an impulsive delta-V is applied again, but during the transfer arcs keplerian motion is applied along with the low thrust acceleration which is typically velocity aligned. 
