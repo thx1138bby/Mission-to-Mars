@@ -1,7 +1,7 @@
 # Mission-to-Mars
 Simulations for the paper "A Simulation and Comparison of Propulsion 
 Systems for a Manned Mission to Mars" evaluating different space propulsion systems for a future manned Mars mission.
-Requires MatPlotLib. To install type in terminal: pip install matplotlib
+Requires MatPlotLib and Scipy. To install type in terminal: pip install matplotlib, pip install scipy
 
 
 ## Abstract
