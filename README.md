@@ -16,10 +16,8 @@ The accompanying paper describes the propulsion systems and equations on which t
 The paper can be found at this link: https://www.researchgate.net/publication/395645472_Simulation_and_Comparison_of_Propulsion_Systems_for_a_Manned_Mission_to_Mars
 
 ## Results
-Simulation Plots:\n
-<img width="470" height="508" alt="Screenshot 2026-08-25 at 10 49 00 PM" src="https://github.com/user-attachments/assets/cd563f57-5ef2-4208-9157-e17615b3cf05" />\n
-Table of Results:\n
-<img width="315" height="360" alt="Screenshot 2026-08-25 at 10 48 09 PM" src="https://github.com/user-attachments/assets/a114e506-2f20-450b-a565-cee6a0147d79" />
+<img width="467" height="540" alt="Screenshot 2026-08-25 at 10 54 26 PM" src="https://github.com/user-attachments/assets/e71c0611-b2cc-422c-9ea0-5d0a82d317f7" />
+<img width="961" height="626" alt="Screenshot 2026-08-25 at 10 53 44 PM" src="https://github.com/user-attachments/assets/06763c61-729b-4d3b-9a8d-ae1079006612" />
 
 ## Table of Contents
 1. ```chemical_hohmann.py```: uses six Raptor chemical rockets to execute a Hohmann transfer.
