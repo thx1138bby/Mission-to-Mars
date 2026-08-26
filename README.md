@@ -16,9 +16,9 @@ The accompanying paper describes the propulsion systems and equations on which t
 The paper can be found at this link: https://www.researchgate.net/publication/395645472_Simulation_and_Comparison_of_Propulsion_Systems_for_a_Manned_Mission_to_Mars
 
 ## Results
-Simulation Plots:
-<img width="470" height="508" alt="Screenshot 2026-08-25 at 10 49 00 PM" src="https://github.com/user-attachments/assets/cd563f57-5ef2-4208-9157-e17615b3cf05" />
-Table of Results:
+Simulation Plots:\n
+<img width="470" height="508" alt="Screenshot 2026-08-25 at 10 49 00 PM" src="https://github.com/user-attachments/assets/cd563f57-5ef2-4208-9157-e17615b3cf05" />\n
+Table of Results:\n
 <img width="315" height="360" alt="Screenshot 2026-08-25 at 10 48 09 PM" src="https://github.com/user-attachments/assets/a114e506-2f20-450b-a565-cee6a0147d79" />
 
 ## Table of Contents
