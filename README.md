@@ -1,7 +1,7 @@
 # Mission-to-Mars
 
 ## Overview
-A project simulating and evaluating propulsion systems for a future manned Mars mission using Python programs. Each file simulates a different scenario for an orbital transfer between Earth and Mars at their respective semimajor axes. The vehicle is the SpaceX Starship. Six different propulsion systems are modeled here: (1) the chemical rocket, (2) the nuclear thermal rocket, (3) the nuclear pulse rocket, (4) the solar sail, (5) the ion thruster, (6) the magnetoplasmadynamic (MPD) thruster. The programs are accompanied by a paper analyzing, comparing, and ranking these simulation results on transfer time and propellant consumption.
+A project simulating and evaluating propulsion systems for a future manned Mars mission using Python programs. Each file simulates a different scenario for an orbital transfer between Earth and Mars at their respective semimajor axes. The vehicle is the SpaceX Starship. Six different propulsion systems are modeled here: (1) the chemical rocket, (2) the nuclear thermal rocket, (3) the nuclear pulse rocket, (4) the solar sail, (5) the ion thruster, and (6) the magnetoplasmadynamic (MPD) thruster. The programs are accompanied by a paper analyzing, comparing, and ranking these simulation results on transfer time and propellant consumption.
 
 ## Installation
 Requires MatPlotLib, NumPy, and SciPy.
