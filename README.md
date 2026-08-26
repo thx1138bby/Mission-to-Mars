@@ -4,9 +4,8 @@
 A project simulating and evaluating propulsion systems for a future manned Mars mission using Python programs. Each file simulates a different scenario for an orbital transfer between Earth and Mars at their respective semimajor axes. The vehicle is the SpaceX Starship. Six different propulsion systems are modeled here: (1) the chemical rocket, (2) the nuclear thermal rocket, (3) the nuclear pulse rocket, (4) the solar sail, (5) the ion thruster, (6) the magnetoplasmadynamic (MPD) thruster. The programs are accompanied by a paper analyzing, comparing, and ranking these simulation results on transfer time and propellant consumption.
 
 ## Installation
-Requires MatPlotLib and SciPy.
-To install MatPlotLib, type into Command Prompt (for Windows) or Terminal (for Mac): ```pip install matplotlib```
-To install SciPy, type: ```pip install scipy```
+Requires MatPlotLib, NumPy, and SciPy.
+To install, type into Command Prompt (for Windows) or Terminal (for Mac): ```pip install matplotlib``` ```pip install numpy``` ```pip install scipy```
 
 ## Execution
 To execute each file, run it in IDLE. Each simulation models the Earth, Mars and the spacecraft under gravitational acceleration of the Sun. The high-thrust simulations each apply an impulsive delta-V at the beginning of the transfer to accelerate out of Earth orbit and at the end to decelerate into Mars orbit. The low-thrust simulations do the same but also apply a low continuous delta-V in transit. Each simulation prints its results including transfer time, delta-V, and propellant consumption, and uses MatPlotLib to generate plots of the orbits. To simplify, the planets' orbits are represented as circular and coplanar, and the spacecraft is assumed to have entered orbit upon reaching the same velocity and radius from the Sun as the planet (disregarding planetary gravitational wells).
